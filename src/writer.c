@@ -29,11 +29,39 @@ int fileCreate(char * fileName) {
 // 	* un pointeur vers la structure s_mat
 // 	* NULL en cas d'échec
 struct s_mat * dataRead(void) {
+	int i, j;
 	struct s_mat * matStruct;
 
 	if ((matStruct = (struct s_mat *) malloc(sizeof(struct s_mat))) == NULL) {
 		perror("malloc");
 		return NULL;
+	}
+
+	// init
+	matStruct->nbMult = 0;
+	matStruct->nbMat = 0;
+
+	if ((matStruct->matSize = (int *) malloc(matStruct->nbMat * sizeof(int))) == NULL) {
+		perror("malloc");
+		return NULL;
+	}
+
+	if ((matStruct->matTab = (int **) malloc(matStruct->nbMat * sizeof(int *))) == NULL) {
+		perror("malloc");
+		return NULL;
+	}
+
+	for (i = 0; i < matStruct->nbMat; i++) {
+		matStruct->matSize[i] = 0;
+
+		if ((matStruct->matTab[i] = (int *) malloc(matStruct->matSize[i] * sizeof(int))) == NULL) {
+			perror("malloc");
+			return NULL;
+		}
+
+		for (j = 0; j < matStruct->matSize[i]; j++) {
+			matStruct->matTab[i][j] = 0;
+		}
 	}
 
 	return matStruct;
