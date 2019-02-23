@@ -10,5 +10,9 @@
 #include "prodmat.h"
 
 int main(int argc, char * argv[]) {
+	s_mat * matStruct;
+
+	matStruct = dataRead();
+
 	return EXIT_SUCCESS;
 }
