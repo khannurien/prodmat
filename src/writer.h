@@ -9,12 +9,6 @@
 //	* -1 en cas d'échec
 int fileCreate(char * fileName);
 
-// lecture de l'entrée utilisateur
-// retourne :
-// 	* un pointeur vers la structure s_mat
-// 	* NULL en cas d'échec
-struct s_mat * dataRead(void);
-
 // écriture des données dans le fichier
 void dataWrite(int fd, struct s_mat * matStruct);
 

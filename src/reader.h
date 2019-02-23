@@ -6,7 +6,7 @@
 // retourne :
 // 	* un pointeur vers la structure s_mat résultante
 // 	* NULL en cas d'échec
-struct s_mat * dataReadFromMem(char * start);
+struct s_mat * dataRead(char * start);
 
 // projection mémoire
 // retourne :

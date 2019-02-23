@@ -18,10 +18,11 @@ int main(int argc, char * argv[]) {
 
 	// lecture entrée utilisateur
 	// écriture dans un fichier
-	matStruct = dataRead();
+	matStruct = dataRead(NULL);
 	fd = fileCreate("coucou.txt");
 	dataWrite(fd, matStruct);
 	close(fd);
+	free(matStruct);
 
 	// depuis un fichier
 	char * start;
@@ -30,7 +31,8 @@ int main(int argc, char * argv[]) {
 	// projection mémoire du fichier
 	start = fileMap("coucou.txt");
 	close(fd);
-	newStruct = dataReadFromMem(start);
+	newStruct = dataRead(start);
+	free(newStruct);
 
 	return EXIT_SUCCESS;
 }

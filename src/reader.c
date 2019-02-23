@@ -39,11 +39,7 @@ char * fileMap(char * fileName) {
 	return memPtr;
 }
 
-// lecture des données des matrices depuis un pointeur
-// retourne :
-// 	* un pointeur vers la structure s_mat résultante
-// 	* NULL en cas d'échec
-struct s_mat * dataReadFromMem(char * start) {
+struct s_mat * dataRead(char * start) {
 	struct s_mat * matStruct;
 
 	if ((matStruct = (struct s_mat *) malloc(sizeof(struct s_mat))) == NULL) {
@@ -53,10 +49,26 @@ struct s_mat * dataReadFromMem(char * start) {
 
 	// init
 	char * end;
+	char buf[256]; // en cas de lecture depuis stdin
 	int nbMult;
 
 	// lecture du nombre de multiplications de matrices
-	nbMult = strtol(start, &end, 10);
+	if (start == NULL) {
+		// stdin
+		printf("Nombre de multiplications de matrices :\n");
+		while (fgets(buf, sizeof(buf), stdin)) {
+			nbMult = strtol(buf, &end, 10);
+
+			if (end == buf || * end != '\n') {
+				printf("Rentrez un entier valide :\n");
+			} else {
+				break;
+			}
+		}
+	} else {
+		// mmap
+		nbMult = strtol(start, &end, 10);
+	}
 	
 	// inscription dans la structure
 	matStruct->nbMult = nbMult;		// nombre de multiplications
@@ -89,8 +101,25 @@ struct s_mat * dataReadFromMem(char * start) {
 		int j;
 		// lecture des tailles
 		for (j = 0; j < 2; j++) {
-			matStruct->matSize[i + j][0] = strtol(end, &end, 10);
-			matStruct->matSize[i + j][1] = strtol(end, &end, 10);
+			if (start == NULL) {
+				// stdin
+				printf("Taille de la matrice %d (<nbLignes> <nbColonnes>) :\n", i + j);
+				while (fgets(buf, sizeof(buf), stdin)) {
+					matStruct->matSize[i + j][0] = strtol(buf, &end, 10);
+					matStruct->matSize[i + j][1] = strtol(end, &end, 10);
+
+					if (end == buf || * end != '\n' || matStruct->matSize[i + j][0] == 0
+													|| matStruct->matSize[i + j][1] == 0) {
+						printf("Rentrez un format valide :\n");
+					} else {
+						break;
+					}
+				}
+			} else {
+				// mmap
+				matStruct->matSize[i + j][0] = strtol(end, &end, 10);
+				matStruct->matSize[i + j][1] = strtol(end, &end, 10);	
+			}
 		}
 
 		// init des lignes de chaque matrice
@@ -117,8 +146,26 @@ struct s_mat * dataReadFromMem(char * start) {
 		for (j = 0; j < 2; j++) {
 			int ligne, colonne;
 			for (ligne = 0; ligne < matStruct->matSize[i + j][0]; ligne++) {
-				for (colonne = 0; colonne < matStruct->matSize[i + j][1]; colonne++) {
-					matStruct->matTab[i + j][ligne][colonne] = strtol(end, &end, 10);
+				if (start == NULL) {
+					// stdin
+					printf("Ligne %d de la matrice %d (<val1,1 val1,2 val1,3 ...) :\n", ligne, i + j);
+					while (fgets(buf, sizeof(buf), stdin)) {
+						end = buf;
+						for (colonne = 0; colonne < matStruct->matSize[i + j][1]; colonne++) {
+							matStruct->matTab[i + j][ligne][colonne] = strtol(end, &end, 10);
+						}
+
+						if (end == buf || * end != '\n') {
+							printf("Rentrez un format valide :\n");
+						} else {
+							break;
+						}
+					}
+				} else {
+					// mmap
+					for (colonne = 0; colonne < matStruct->matSize[i + j][1]; colonne++) {
+						matStruct->matTab[i + j][ligne][colonne] = strtol(end, &end, 10);
+					}					
 				}
 			}
 		}
