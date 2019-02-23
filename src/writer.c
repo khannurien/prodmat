@@ -90,7 +90,8 @@ struct s_mat * dataRead(void) {
 				matStruct->matSize[i + j][0] = strtol(buf, &end, 10);
 				matStruct->matSize[i + j][1] = strtol(end, &end, 10);
 
-				if (end == buf || * end != '\n') {
+				if (end == buf || * end != '\n' || matStruct->matSize[i + j][0] == 0
+												|| matStruct->matSize[i + j][1] == 0) {
 					printf("Rentrez un format valide :\n");
 				} else {
 					break;
@@ -118,6 +119,7 @@ struct s_mat * dataRead(void) {
 		}
 
 		// lecture des données
+		// TODO: vérifier que le format concorde...
 		for (j = 0; j < 2; j++) {
 			int ligne, colonne;
 			for (ligne = 0; ligne < matStruct->matSize[i + j][0]; ligne++) {
@@ -195,26 +197,4 @@ void dataWrite(int fd, struct s_mat * matStruct) {
 
 	// fermeture du descripteur de fichier
 	close(fd);
-}
-
-// projection mémoire
-// retourne :
-// 	* un pointeur vers la zone de projection
-// 	* NULL en cas d'échec
-char * fileMap(int fd, char * fileName) {
-	char * file;
-	struct stat fileStat;
-
-	if (stat(fileName, &fileStat) == -1) {
-		perror("stat");
-		return NULL;
-	}
-
-	if ((file = mmap(NULL, (size_t) fileStat.st_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0)) == MAP_FAILED) {
-		perror("mmap");
-		// switch (errno) ...
-		return NULL;
-	}
-
-	return file;
 }

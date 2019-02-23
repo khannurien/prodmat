@@ -18,10 +18,4 @@ struct s_mat * dataRead(void);
 // écriture des données dans le fichier
 void dataWrite(int fd, struct s_mat * matStruct);
 
-// projection mémoire
-// retourne :
-// 	* un pointeur vers la zone de projection
-// 	* NULL en cas d'échec
-char * fileMap(int fd, char * fileName);
-
 #endif
