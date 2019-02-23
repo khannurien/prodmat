@@ -11,8 +11,12 @@
 
 int main(int argc, char * argv[]) {
 	s_mat * matStruct;
+	int fd;
+	int test;
 
 	matStruct = dataRead();
+	fd = fileCreate("coucou.txt");
+	dataWrite(fd, matStruct);
 
 	return EXIT_SUCCESS;
 }

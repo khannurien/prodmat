@@ -16,10 +16,7 @@ int fileCreate(char * fileName);
 struct s_mat * dataRead(void);
 
 // écriture des données dans le fichier
-// retourne :
-// 	* le nombre d'octets écrits
-// 	* -1 en cas d'échec
-int dataWrite(int fd, struct s_mat * matStruct);
+void dataWrite(int fd, struct s_mat * matStruct);
 
 // projection mémoire
 // retourne :
