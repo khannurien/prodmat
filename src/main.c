@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
 #include <sched.h>		/* cpu_set_t */
@@ -205,8 +206,6 @@ int main(int argc, char * argv[]) {
 
 	/* Lire le nombre d'iterations et la taille des vecteurs */
 
-		int fd;
-
 		if ((fd = open(argv[1], O_RDWR)) == -1) {
 			perror("open");
 			return EXIT_FAILURE;
@@ -274,13 +273,13 @@ int main(int argc, char * argv[]) {
 	pthread_attr_t threads_attr[nbcpus];
 
 	for (i = 0; i < prod.size; i++) {
-			printf("prod size : %d\n", prod.size);
+			printf("prod size : %d\n", (int) prod.size);
 		/* Initialisation des struct attr */
 		pthread_attr_init(&threads_attr[i]);
 		/* RAZ */
 		CPU_ZERO(&threads_cpus[i]);
 		/* Attribution */
-			printf("i : %d\n", i);
+			printf("i : %d\n", (int) i);
 			printf("nbcpus : %d\n", nbcpus);
 		CPU_SET(i % nbcpus, &threads_cpus[i]);
 		/*

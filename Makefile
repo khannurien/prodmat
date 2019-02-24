@@ -1,7 +1,7 @@
 DIRS=bin obj
 
 all: obj/writer.o obj/reader.o obj/main.o
-	gcc -o bin/prodmat obj/writer.o obj/reader.o obj/main.o
+	gcc -o bin/prodmat obj/writer.o obj/reader.o obj/main.o -pthread
 
 obj/writer.o: src/writer.c src/writer.h src/prodmat.h
 	gcc -c src/writer.c -o obj/writer.o
