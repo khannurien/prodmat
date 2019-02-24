@@ -18,22 +18,26 @@ char * fileMap(char * fileName) {
 	int fd;
 	struct stat fileStat;
 
+	// ouverture du fichier en lecture seule
 	if ((fd = open(fileName, O_RDONLY)) == -1) {
 		perror("open");
 		return NULL;
 	}
 
+	// obtention de sa taille (notamment) dans la structure stat
 	if (stat(fileName, &fileStat) == -1) {
 		perror("stat");
 		return NULL;
 	}
 
+	// projection du fichier dans une zone mémoire partagée en lecture seule
 	if ((memPtr = mmap(NULL, (size_t) fileStat.st_size, PROT_READ, MAP_SHARED, fd, 0)) == MAP_FAILED) {
 		perror("mmap");
 		// switch (errno) ...
 		return NULL;
 	}
 
+	// fermeture du descripteur de fichier
 	close(fd);
 
 	return memPtr;
@@ -122,7 +126,7 @@ struct s_mat * dataRead(char * start) {
 			}
 		}
 
-		// init des lignes de chaque matrice
+		// allocation des lignes de chaque matrice
 		int k;
 		for (k = 0; k < matStruct->nbMat; k++) {
 			if ((matStruct->matTab[k] = (int **) malloc(matStruct->matSize[k][0] * sizeof(int *))) == NULL) {
@@ -130,7 +134,7 @@ struct s_mat * dataRead(char * start) {
 				free(matStruct->matTab);
 				return NULL;
 			}
-			// init des colonnes de chaque ligne
+			// allocation des colonnes de chaque ligne
 			int j;
 			for (j = 0; j < matStruct->matSize[k][0]; j++) {
 				if ((matStruct->matTab[k][j] = (int *) malloc(matStruct->matSize[k][1] * sizeof(int))) == NULL) {
