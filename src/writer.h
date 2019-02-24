@@ -2,14 +2,17 @@
 #define _WRITER_
 #include "prodmat.h"
 
-// création du fichier de données
-// si le fichier existe, il est vidé
-// retourne :
-//	* le descripteur de fichier
-//	* -1 en cas d'échec
+/**
+ * Création d'un fichier de données désigné par son chemin.
+ * Si le fichier existe, il est vidé.
+ * La fonction retourne le descripteur de fichier, ou -1 en cas d'échec.
+ */
 int fileCreate(char * fileName);
 
-// écriture des données dans le fichier
+/**
+ * Écriture des données dans un fichier désigné par son descripteur.
+ * Prend une structure s_mat en entrée.
+ */
 void dataWrite(int fd, struct s_mat * matStruct);
 
 #endif

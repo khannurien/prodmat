@@ -30,7 +30,6 @@ int main(int argc, char * argv[]) {
 
 	// projection mémoire du fichier
 	start = fileMap("coucou.txt");
-	close(fd);
 	newStruct = dataRead(start);
 	free(newStruct);
 

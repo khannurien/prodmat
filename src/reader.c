@@ -9,10 +9,10 @@
 #include "reader.h"
 #include "prodmat.h"
 
-// projection mémoire
-// retourne :
-// 	* un pointeur vers la zone de projection
-// 	* NULL en cas d'échec
+/**
+ * Projection mémoire pour un fichier désigné par son chemin.
+ * Retourne un pointeur vers la zone de projection, ou NULL en cas d'échec.
+ */
 char * fileMap(char * fileName) {
 	char * memPtr;
 	int fd;

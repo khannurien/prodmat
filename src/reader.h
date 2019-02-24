@@ -2,16 +2,16 @@
 #define _READER_
 #include "prodmat.h"
 
-// lecture des données des matrices depuis un pointeur
-// retourne :
-// 	* un pointeur vers la structure s_mat résultante
-// 	* NULL en cas d'échec
-struct s_mat * dataRead(char * start);
-
-// projection mémoire
-// retourne :
-// 	* un pointeur vers la zone de projection
-// 	* NULL en cas d'échec
+/**
+ * Projection mémoire pour un fichier désigné par son chemin.
+ * Retourne un pointeur vers la zone de projection, ou NULL en cas d'échec.
+ */
 char * fileMap(char * fileName);
+
+/**
+ * Lecture des données des matrices depuis un pointeur.
+ * Retourne un pointeur vers la structure s_mat résultante, ou NULL en cas d'échec.
+ */
+struct s_mat * dataRead(char * start);
 
 #endif
