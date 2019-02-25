@@ -33,7 +33,8 @@ int nbPendingMult(Product * prod) {
 }
 
 /**
- * 
+ *
+ * Exemple : wasteTime(200+(rand()%200));
  */
 void wasteTime(unsigned long ms) {
 	unsigned long t, t0;
