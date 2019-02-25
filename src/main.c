@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>		/* strcat */
 #include <sched.h>		/* cpu_set_t */
 #include <pthread.h>	/* pthread, mutex, cond */
 #include <fcntl.h> 		/* open */
@@ -43,17 +44,17 @@ void * calc(void * data) {
 		fprintf(stderr,"--> calc(%d)\n", (int) index);
 
 		// calcul des index dans les matrices en fonction de l'index du thread
+		int iMat = (((int) iter) * 2);
 		int i, j;
-		int iMat = ((int) index) * 2 + 1;
-		i = ((int) index) / prod.matrix->matSize[iMat][1];
-		j = ((int) index) - i * prod.matrix->matSize[iMat][1];
+		i = index / prod.matrix->matSize[iMat + 1][1];
+		j = index - i * prod.matrix->matSize[iMat + 1][1];
 
 		// calcul du coefficient à placer dans la matrice résultat
 		int coeff = 0;
 
 		int k;
-		for (k = 0; k < prod.matrix->matSize[(int) index * 2][0]; k++) {
-			coeff += prod.matrix->matTab[(int) index * 2][i][k] * prod.matrix->matTab[((int) index) * 2 + 1][k][j];
+		for (k = 0; k < prod.matrix->matSize[iMat][0]; k++) {
+			coeff += prod.matrix->matTab[iMat][i][k] * prod.matrix->matTab[iMat + 1][k][j];
 		}
 
 		// affectation à la matrice de résultat
@@ -195,7 +196,7 @@ int main(int argc, char * argv[]) {
 	for (i = 0; i < prod.maxThreads; i++) {
 		if (pthread_create(&multTh[i], &threads_attr[i % nbcpus], calc, &multData[i]) == -1) {
 			perror("pthread_create");
-		return EXIT_FAILURE;
+			return EXIT_FAILURE;
 		}
 	}
 
@@ -222,20 +223,22 @@ int main(int argc, char * argv[]) {
 		pthread_mutex_unlock(&prod.mutex);
 
 		// écriture de la matrice résultat dans le fichier
-		// TODO: ...
+		int fdRes;
+		char resFile[256];
+		strcpy(resFile, fileName);
+		strcat(resFile, ".res");
+		fdRes = fileCreate(resFile);
+		resWrite(fdRes, prod.res, prod.matrix->matSize[(int) iter][0], prod.matrix->matSize[(int) iter + 1][1]);
 	}
 
 	// attente de la fin des multiplications
-	int * status;
+	int status;
 	for (i = 0; i < prod.maxThreads; i++) {
-		if (pthread_join(multTh[i], (void *) status) != 0) {
+		if (pthread_join(multTh[i], (void *) &status) != 0) {
 			perror("pthread_join");
 			return EXIT_FAILURE;
 		}
 	}
-
-	// libération de status
-	free(status);
 
 	// destruction de cond
 	pthread_cond_destroy(&prod.cond);

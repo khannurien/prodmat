@@ -15,4 +15,9 @@ int fileCreate(char * fileName);
  */
 void dataWrite(int fd, struct s_mat * matStruct);
 
+/**
+ * 
+ */
+void resWrite(int fd, int ** matrix, int maxL, int maxC);
+
 #endif

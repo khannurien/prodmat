@@ -38,7 +38,7 @@ void dataWrite(int fd, struct s_mat * matStruct) {
 	sprintf(buf, "%d\n", matStruct->nbMult);
 	if ((wr = write(fd, buf, strlen(buf))) == -1) {
 		perror("write");
-		return;
+		exit(EXIT_FAILURE);
 	}
 
 	// écriture des infos sur les matrices, deux à deux
@@ -50,14 +50,14 @@ void dataWrite(int fd, struct s_mat * matStruct) {
 
 			if ((wr = write(fd, buf, strlen(buf))) == -1) {
 				perror("write");
-				return;
+				exit(EXIT_FAILURE);
 			}
 
 			sprintf(buf, "%d\n", matStruct->matSize[i + j][1]);
 
 			if ((wr = write(fd, buf, strlen(buf))) == -1) {
 				perror("write");
-				return;
+				exit(EXIT_FAILURE);
 			}
 		}
 
@@ -69,13 +69,13 @@ void dataWrite(int fd, struct s_mat * matStruct) {
 					sprintf(buf, "%d ", matStruct->matTab[i + j][ligne][colonne]);
 					if ((wr = write(fd, buf, strlen(buf))) == -1) {
 						perror("write");
-						return;
+						exit(EXIT_FAILURE);
 					}
 				}
 
 				if ((wr = write(fd, "\n", sizeof(char))) == -1) {
 					perror("write");
-					return;
+					exit(EXIT_FAILURE);
 				}
 			}
 		}
@@ -83,4 +83,32 @@ void dataWrite(int fd, struct s_mat * matStruct) {
 
 	// fermeture du descripteur de fichier
 	close(fd);
+}
+
+/**
+ * 
+ */
+void resWrite(int fd, int ** matrix, int maxL, int maxC) {
+	int i, j;
+	char buf[256];
+
+	for (i = 0; i < maxL; i++) {
+		for (j = 0; j < maxC; j++) {
+			sprintf(buf, "%d ", matrix[i][j]);
+			if ((write(fd, buf, strlen(buf))) == -1) {
+				perror("write");
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		if ((write(fd, "\n", sizeof(char))) == -1) {
+			perror("write");
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	if ((write(fd, "\n", sizeof(char))) == -1) {
+		perror("write");
+		exit(EXIT_FAILURE);
+	}
 }
