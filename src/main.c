@@ -20,166 +20,73 @@
 Product prod;
 
 /**
- * 
- */
-void initPendingMult(Product * prod) {
-	size_t i;
-
-	for (i = 0; i < prod->size; i++) {
-		prod->pendingMult[i] = 1;
-	}
-}
-
-/**
- * 
- */
-int nbPendingMult(Product * prod) {
-	size_t i;
-	int nb = 0;
-	for (i = 0; i < prod->size; i++) {
-		nb += prod->pendingMult[i];
-	}
-
-	return(nb);
-}
-
-/**
- * 
- */
-void wasteTime(unsigned long ms) {
-	unsigned long t, t0;
-	struct timeval tv;
-	gettimeofday(&tv, (struct timezone *) 0);
-	t0 = tv.tv_sec * 1000LU + tv.tv_usec / 1000LU;
-
-	do {
-		gettimeofday(&tv,(struct timezone *)0);
-		t = tv.tv_sec * 1000LU + tv.tv_usec / 1000LU;
-	} while (t - t0 < ms);
-}
-
-/**
  * Fonction de calcul passée aux threads de multiplication.
  */
-void * mult(void * data)
-{
-size_t index;
-size_t iter;
+void * calc(void * data) {
+	size_t index;
+	size_t iter;
 
-/*=>Recuperation de l'index, c'est a dire index = ... */
-index = * ((size_t *) data);
+	// récupération de l'index
+	index = * ((size_t *) data);
+	fprintf(stderr,"Begin mult(%d)\n", (int) index);
 
-fprintf(stderr,"Begin mult(%d)\n", (int) index);
-                                           /* Tant que toutes les iterations */
-for(iter=0;iter<prod.nbIterations;iter++)  /* n'ont pas eu lieu              */
- {
- /*=>Attendre l'autorisation de multiplication POUR UNE NOUVELLE ITERATION...*/
- pthread_mutex_lock(&prod.mutex);
- while((prod.state != STATE_MULT) || (prod.pendingMult[index] == 0)) {
-  pthread_cond_wait(&prod.cond, &prod.mutex);
- }
- pthread_mutex_unlock(&prod.mutex);
+	// tant que toutes les itérations n'ont pas eu lieu...
+	for (iter = 0; iter < prod.matrix->nbMult; iter++) {
+		// attente de l'autorisation de multiplication pour une nouvelle itération
+		pthread_mutex_lock(&prod.mutex);
+		while((prod.state != STATE_CALC) || (prod.pendingMult[index] == 0)) {
+			pthread_cond_wait(&prod.cond, &prod.mutex);
+		}
+ 		pthread_mutex_unlock(&prod.mutex);
 
- fprintf(stderr,"--> mult(%d)\n", (int) index); /* La multiplication peut commencer */
+		// on débute la multiplication
+		fprintf(stderr,"--> calc(%d)\n", (int) index);
 
- /*=>Effectuer la multiplication a l'index du thread courant... */
- prod.v3[index] = prod.v1[index] * prod.v2[index];
+		// calcul des index dans les matrices en fonction de l'index du thread
+		int i, j;
+		i = (int) index / prod.matrix->matSize[(int) index + 1][1];
+		j = (int) index - i * prod.matrix->matSize[(int) index + 1][1];
 
- wasteTime(200+(rand()%200)); /* Perte du temps avec wasteTime() */
+		// calcul du coefficient à placer dans la matrice résultat
+		int coeff = 0;
 
- fprintf(stderr,"<-- mult(%d) : %.3g*%.3g=%.3g\n",           /* Affichage du */
-         (int) index,prod.v1[(int) index],prod.v2[(int) index],prod.v3[(int) index]);/* calcul sur   */
-                                                             /* l'index      */
- /*=>Marquer la fin de la multiplication en cours... */
- pthread_mutex_lock(&prod.mutex);
- prod.pendingMult[index] = 0;
+		int k;
+		for (k = 0; k < prod.matrix->matSize[(int) index][0]; k++) {
+			coeff += prod.matrix->matTab[(int) index][i][k] * prod.matrix->matTab[(int) index + 1][k][j];
+		}
 
- /*=>Si c'est la derniere... */
- if (nbPendingMult(&prod) == 0)
-   {
-    /*=>Autoriser le demarrage de l'addition... */
- 	  prod.state = STATE_ADD;
-   }
+		// affectation à la matrice de résultat
+		prod.res[i][j] = coeff;
+		printf("%d\n", coeff);
 
- pthread_cond_broadcast(&prod.cond);
- /* libération du mutex */
- pthread_mutex_unlock(&prod.mutex);
- }
+		// perte de temps
+		wasteTime(200+(rand()%200));
 
-fprintf(stderr,"Quit mult(%d)\n", (int) index);
-return(data);
+		// marquer la fin de la multiplication en cours
+		pthread_mutex_lock(&prod.mutex);
+		prod.pendingMult[index] = 0;
+
+		// si c'est la dernière...
+		if (nbPendingMult(&prod) == 0) {
+			// on autorise le démarrage de l'écriture
+			prod.state = STATE_WRITE;
+		}
+
+		// libération du mutex
+		pthread_cond_broadcast(&prod.cond);
+		pthread_mutex_unlock(&prod.mutex);
+	}
+
+	// fin du calcul
+	fprintf(stderr,"Quit calc(%d)\n", (int) index);
+
+	return(data);
 }
 
-/*****************************************************************************/
-void * add(void * data)
-{
-size_t iter;
-fprintf(stderr,"Begin add()\n");
-                                           /* Tant que toutes les iterations */
-for(iter=0;iter<prod.nbIterations;iter++)  /* n'ont pas eu lieu              */
-  {
-  size_t index;
-
-  /*=>Attendre l'autorisation d'addition... */
-  pthread_mutex_lock(&prod.mutex);
-  while(prod.state != STATE_ADD) {
-   pthread_cond_wait(&prod.cond, &prod.mutex);
-  }
-  pthread_mutex_unlock(&prod.mutex);
-
-  fprintf(stderr,"--> add\n"); /* L'addition peut commencer */
-
-  /* Effectuer l'addition... */
-  prod.result=0.0;
-  for(index=0;index<prod.size;index++)
-  {
-   prod.result += prod.v3[index];
-  }
-
-  wasteTime(100+(rand()%100)); /* Perdre du temps avec wasteTime() */
-
-  fprintf(stderr,"<-- add\n");
-
-  /*=>Autoriser le demarrage de l'affichage... */
-  pthread_mutex_lock(&prod.mutex);
-  prod.state = STATE_PRINT;
-  pthread_cond_broadcast(&prod.cond);
-  
-  /* libération du mutex */
-  pthread_mutex_unlock(&prod.mutex);
-  }
-
-fprintf(stderr,"Quit add()\n");
-return(data);
-}
-
+/**
+ *
+ */
 int main(int argc, char * argv[]) {
-	// depuis l'entrée standard
-	s_mat * matStruct;
-	int fd;
-	int test;
-
-	// lecture entrée utilisateur
-	// écriture dans un fichier
-	matStruct = dataRead(NULL);
-	fd = fileCreate("coucou.txt");
-	dataWrite(fd, matStruct);
-	close(fd);
-	free(matStruct);
-
-	// depuis un fichier
-	char * start;
-	s_mat * newStruct;
-
-	// projection mémoire du fichier
-	start = fileMap("coucou.txt");
-	newStruct = dataRead(start);
-	free(newStruct);
-
-	/**
-	 * 
-	 */
-
 	size_t i, iter;
 	pthread_t *multTh;
 	size_t    *multData;
@@ -192,89 +99,92 @@ int main(int argc, char * argv[]) {
 	/* A cause de warnings lorsque le code n'est pas encore la...*/
 	(void)addTh; (void)threadReturnValue;
 
-	/* Lire le fichier de données */
+	// récupération du chemin du fichier de données
+	char * fileName;
+	if ((argc <= 1) || (sscanf(argv[1], "%s", fileName) != 1)) {
+		fprintf(stderr, "Usage: %s fileName\n", argv[0]);
+		return EXIT_FAILURE;
+	}
 
-		char * fileName;
-		//fileName = argv[1];
+	// projection mémoire
+	char * memData;
+	memData = fileMap(fileName);
 
-		if ((argc <= 1) ||
-					(sscanf(argv[1], "%s", fileName) != 1)) {
-			fprintf(stderr, "Usage: %s fileName\n", argv[0]);
+	// lecture données
+	char * start;
+	s_mat * matData;
+	matData = dataRead(start);
+
+	// initialisation
+	prod.state = STATE_WAIT;
+
+	// recherche du nombre maximal de threads, de lignes, de colonnes
+	int maxTh = 0;
+	int maxL = 0;
+	int maxC = 0;
+	int n;
+	for (n = 0; n < prod.matrix->nbMult; n += 2) {
+		// max threads
+		int tmpMax = prod.matrix->matSize[n][0] * prod.matrix->matSize[n + 1][1];
+		if (tmpMax > maxTh) maxTh = tmpMax;
+
+		// max lignes
+		if (prod.matrix->matSize[n][0] > maxL) maxL = prod.matrix->matSize[n][0];
+
+		// max colonnes
+		if (prod.matrix->matSize[n + 1][1] > maxC) maxC = prod.matrix->matSize[n + 1][1];
+	}
+
+	// affectation
+	prod.maxThreads = maxTh;
+
+	// allocation de la matrice de résultat
+	if ((prod.res = (int **) malloc(maxL * sizeof(int *))) == NULL) {
+		perror("malloc");
+		return EXIT_FAILURE;
+	}
+
+	int ligne;
+	for (ligne = 0; ligne < maxL; ligne++) {
+		if ((prod.res[ligne] = (int *) malloc(maxC * sizeof(int))) == NULL) {
+			perror("malloc");
 			return EXIT_FAILURE;
 		}
+	}
 
-	/* Lire le nombre d'iterations et la taille des vecteurs */
+	// init pendingMult
+	prod.pendingMult = (int *) malloc(prod.maxThreads * sizeof(int));
+	// préparation de la première itération
+	initPendingMult(&prod);
 
-		int fd;
-
-		if ((fd = open(argv[1], O_RDWR)) == -1) {
-			perror("open");
-			return EXIT_FAILURE;
-		}
-
-		// stat taille fichier
-		struct stat fileStat;
-		stat(fileName, &fileStat);
-
-		// projection mémoire
-		char * file = mmap(NULL, (size_t) fileStat.st_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);	
-
-		// fermeture descripteur fichier
-		close(fd);
-
-		// lecture données
-		char * next;
-
-		prod.nbIterations = (size_t) strtol(file, &next, 10);
-		prod.size = (size_t) strtol(next, &next, 10);
-
-	/* Initialisations (Product, tableaux, generateur aleatoire,etc) */
-
-	prod.state=STATE_WAIT;
-
-	prod.pendingMult=(int *)malloc(prod.size*sizeof(int));
-
-	initPendingMult(&prod); /* en vue de la première itération */
-
-	/*=>initialiser prod.mutex ... */
+	// init prod.mutex
 	if (pthread_mutex_init(&prod.mutex, NULL) == -1) {
-	perror("pthread_mutex_init");
-	return EXIT_FAILURE;
+		perror("pthread_mutex_init");
+		return EXIT_FAILURE;
 	}
 
-	/*=>initialiser prod.cond ...  */
+	// init prod.cond
 	if (pthread_cond_init(&prod.cond, NULL) == -1) {
-	perror("pthread_cond_init");
-	return EXIT_FAILURE;
+		perror("pthread_cond_init");
+		return EXIT_FAILURE;
 	}
 
-	/* Allocation dynamique des 3 vecteurs v1, v2, v3 */
+	// allocation du tableau des threads de calcul
+	multTh = (pthread_t *) malloc(prod.maxThreads * sizeof(pthread_t));
 
-	prod.v1=(double *)malloc(prod.size*sizeof(double));
-	prod.v2=(double *)malloc(prod.size*sizeof(double));
-	prod.v3=(double *)malloc(prod.size*sizeof(double));
+	// allocation du tableau des multData
+	multData = (size_t *) malloc(prod.maxThreads * sizeof(size_t));
 
-	/* Allocation dynamique du tableau pour les threads multiplieurs */
-
-	multTh=(pthread_t *)malloc(prod.size*sizeof(pthread_t));
-
-	/* Allocation dynamique du tableau des MulData */
-
-	multData=(size_t *)malloc(prod.size*sizeof(size_t));
-
-	/* Initialisation du tableau des MulData */
-
-	for(i=0;i<prod.size;i++)
-	{
-	multData[i]=i;
+	// init multData
+	for (i = 0; i < prod.maxThreads; i++) {
+		multData[i] = i;
 	}
 
 	/* Threads & CPUs */
 	cpu_set_t threads_cpus[nbcpus];
 	pthread_attr_t threads_attr[nbcpus];
 
-	for (i = 0; i < prod.size; i++) {
-			printf("prod size : %d\n", prod.size);
+	for (i = 0; i < prod.maxThreads; i++) {
 		/* Initialisation des struct attr */
 		pthread_attr_init(&threads_attr[i]);
 		/* RAZ */
@@ -290,88 +200,60 @@ int main(int argc, char * argv[]) {
 		pthread_attr_setaffinity_np(&threads_attr[i], sizeof(threads_cpus[i]), &threads_cpus[i]);
 	}
 
-	/*=>Creer les threads de multiplication... */
-	for (i = 0; i < prod.size; i++) {
-	if (pthread_create(&multTh[i], &threads_attr[i], mult, &multData[i]) == -1) {
-	perror("pthread_create");
-	return EXIT_FAILURE;
-	}
-	}
-
-	/*=>Creer le thread d'addition...          */
-	if (pthread_create(&addTh, NULL, add, NULL) == -1) {
-	perror("pthread_create");
-	return EXIT_FAILURE;
-	}
-
-	srand(time((time_t *)0));   /* Init du generateur de nombres aleatoires */
-
-	/* Pour chacune des iterations a realiser, c'est a dire :                   */
-	for(iter=0;iter<prod.nbIterations;iter++) /* tant que toutes les iterations */
-	{                                       /* n'ont pas eu lieu              */
-	size_t j;
-
-	/* Initialiser aleatoirement les deux vecteurs */
-
-	for(j=0;j<prod.size;j++)
-		{
-		prod.v1[j] = strtol(next, &next, 10);
+	// création des threads de multiplication
+	for (i = 0; i < prod.maxThreads; i++) {
+		if (pthread_create(&multTh[i], &threads_attr[i], calc, &multData[i]) == -1) {
+			perror("pthread_create");
+		return EXIT_FAILURE;
 		}
-
-	for(j=0;j<prod.size;j++)
-		{
-		prod.v2[j] = strtol(next, &next, 10);
-		}
-
-	/*=>Autoriser le demarrage des multiplications pour une nouvelle iteration..*/
-	pthread_mutex_lock(&prod.mutex);
-	initPendingMult(&prod); /* on remet les compteurs à 1 pour la prochaine itération */
-	prod.state = STATE_MULT;
-	pthread_cond_broadcast(&prod.cond);
-	pthread_mutex_unlock(&prod.mutex);
-
-	/*=>Attendre l'autorisation d'affichage...*/
-	pthread_mutex_lock(&prod.mutex);
-	while(prod.state != STATE_PRINT)
-	pthread_cond_wait(&prod.cond, &prod.mutex);
-	pthread_mutex_unlock(&prod.mutex);
-
-	/*=>Afficher le resultat de l'iteration courante...*/
-	printf("Résultat pour l'itération #%d : %.3g\n", (int) iter + 1, prod.result);
 	}
 
-	/* retour des threads */
+	// tant que toutes les itérations n'ont pas eu lieu...
+	for (iter = 0; iter < prod.matrix->nbMult; iter++) {
+		size_t j;
+
+		// calcul du nombre de threads effectifs
+		prod.nbThreads = prod.matrix->matSize[n][0] * prod.matrix->matSize[n + 1][1];
+
+		pthread_mutex_lock(&prod.mutex);
+		// on remet les compteurs à 1 pour la prochaine itération
+		initPendingMult(&prod);
+		// autorisation de démarrage des multiplications pour une nouvelle itération
+		prod.state = STATE_CALC;
+		pthread_cond_broadcast(&prod.cond);
+		pthread_mutex_unlock(&prod.mutex);
+
+		// attente de l'autorisation d'écriture
+		pthread_mutex_lock(&prod.mutex);
+		while(prod.state != STATE_WRITE) {
+			pthread_cond_wait(&prod.cond, &prod.mutex);
+		}
+		pthread_mutex_unlock(&prod.mutex);
+
+		// écriture de la matrice résultat dans le fichier
+		// TODO: ...
+	}
+
+	// attente de la fin des multiplications
 	int * status;
-
-	/*=>Attendre la fin des threads de multiplication...*/
-	for (i = 0; i < prod.size; i++) {
-	if (pthread_join(multTh[i], (void *) &status) != 0) {
-	perror("pthread_join");
-	return EXIT_FAILURE;
-	}
+	for (i = 0; i < prod.maxThreads; i++) {
+		if (pthread_join(multTh[i], (void *) status) != 0) {
+			perror("pthread_join");
+			return EXIT_FAILURE;
+		}
 	}
 
-	/*=>Attendre la fin du thread d'addition...*/
-	if (pthread_join(addTh, (void *) &status) != 0) {
-	perror("pthread_join");
-	return EXIT_FAILURE;
-	}
-
-	/* Libération de status */
+	// libération de status
 	free(status);
 
-	/*=> detruire prod.cond ... */
+	// destruction de cond
 	pthread_cond_destroy(&prod.cond);
 
-	/*=> detruire prod.mutex ... */
+	// destruction du mutex
 	pthread_mutex_destroy(&prod.mutex);
 
-	/* Detruire avec free ce qui a ete initialise avec malloc */
-
+	// libérations
 	free(prod.pendingMult);
-	free(prod.v1);
-	free(prod.v2);
-	free(prod.v3);
 	free(multTh);
 	free(multData);
 	return(EXIT_SUCCESS);

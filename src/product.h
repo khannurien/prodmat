@@ -2,15 +2,15 @@
 #define _PRODUCT_
 #define _GNU_SOURCE
 #include <sys/types.h>	/* pthread, size_t */
+#include "prodmat.h"
 
 /**
  * 
  */
 typedef enum {
 	STATE_WAIT,
-	STATE_MULT,
-	STATE_ADD,
-  	STATE_PRINT
+	STATE_CALC,
+  	STATE_WRITE
 } State;
 
 /**
@@ -21,22 +21,30 @@ typedef struct {
 	int * pendingMult;
 	pthread_cond_t cond;
 	pthread_mutex_t mutex;
-	size_t nbIterations;
-	size_t size;
-	double * v1;
-	double * v2;
-	double * v3;
-	double result;
+	size_t maxThreads; // le nombre maximum de threads requis pour un produit matriciel
+	size_t nbThreads; // le nombre de threads effectivement engagés dans un produit matriciel
+	s_mat * matrix; // un pointeur vers la structure contenant les matrices (tailles et valeurs)
+	int ** res; // matrice de résultat
 } Product;
 
 /**
  * 
  */
-void * mult(void * data);
+void initPendingMult(Product * prod);
 
 /**
  * 
  */
-void * add(void * data);
+int nbPendingMult(Product * prod);
+
+/**
+ * 
+ */
+void wasteTime(unsigned long ms);
+
+/**
+ * Fonction de calcul passée aux threads.
+ */
+void * calc(void * data);
 
 #endif
