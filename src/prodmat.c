@@ -186,7 +186,7 @@ int main(int argc, char * argv[]) {
 		pthread_attr_init(&threads_attr[indexMod]);
 		// RAZ
 		CPU_ZERO(&threads_cpus[indexMod]);
-		// ajout d'un CPU à l'ensemble des CPUs d'exécutionttribution
+		// ajout d'un CPU à l'ensemble
 		CPU_SET(indexMod, &threads_cpus[indexMod]);
 		// mise en place de l'affinité du thread sur cet ensemble
 		pthread_attr_setaffinity_np(&threads_attr[indexMod], sizeof(threads_cpus[indexMod]), &threads_cpus[indexMod]);

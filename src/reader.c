@@ -156,7 +156,6 @@ struct s_mat * dataRead(char * start) {
 						end = buf;
 						for (colonne = 0; colonne < matStruct->matSize[i + j][1]; colonne++) {
 							matStruct->matTab[i + j][ligne][colonne] = strtol(end, &end, 10);
-							printf("%d\n", matStruct->matTab[i + j][ligne][colonne]);
 						}
 
 						if (end == buf || * end != '\n') {

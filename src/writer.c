@@ -32,7 +32,7 @@ int fileCreate(char * fileName) {
  */
 void dataWrite(int fd, struct s_mat * matStruct) {
 	int wr;
-	char buf[256];
+	char buf[8];
 
 	// écriture du nombre de multiplications
 	sprintf(buf, "%d\n", matStruct->nbMult);
@@ -43,17 +43,17 @@ void dataWrite(int fd, struct s_mat * matStruct) {
 
 	// écriture des infos sur les matrices, deux à deux
 	int i, j;
-	for (i = 0; i <= matStruct->nbMult; i += 2) {
+	for (i = 0; i < matStruct->nbMult; i++) {
 		for (j = 0; j < 2; j++) {
 			// écriture des tailles
-			sprintf(buf, "%d ", matStruct->matSize[i + j][0]);
+			sprintf(buf, "%d ", matStruct->matSize[i * 2 + j][0]);
 
 			if ((wr = write(fd, buf, strlen(buf))) == -1) {
 				perror("write");
 				exit(EXIT_FAILURE);
 			}
 
-			sprintf(buf, "%d\n", matStruct->matSize[i + j][1]);
+			sprintf(buf, "%d\n", matStruct->matSize[i * 2 + j][1]);
 
 			if ((wr = write(fd, buf, strlen(buf))) == -1) {
 				perror("write");
@@ -64,9 +64,9 @@ void dataWrite(int fd, struct s_mat * matStruct) {
 		for (j = 0; j < 2; j++) {
 			// écriture des valeurs
 			int ligne, colonne;
-			for (ligne = 0; ligne < matStruct->matSize[i + j][0]; ligne++) {
-				for (colonne = 0; colonne < matStruct->matSize[i + j][1]; colonne++) {
-					sprintf(buf, "%d ", matStruct->matTab[i + j][ligne][colonne]);
+			for (ligne = 0; ligne < matStruct->matSize[i * 2 + j][0]; ligne++) {
+				for (colonne = 0; colonne < matStruct->matSize[i * 2 + j][1]; colonne++) {
+					sprintf(buf, "%d ", matStruct->matTab[i * 2 + j][ligne][colonne]);
 					if ((wr = write(fd, buf, strlen(buf))) == -1) {
 						perror("write");
 						exit(EXIT_FAILURE);
@@ -90,7 +90,7 @@ void dataWrite(int fd, struct s_mat * matStruct) {
  */
 void resWrite(int fd, int ** matrix, int maxL, int maxC) {
 	int i, j;
-	char buf[256];
+	char buf[8];
 
 	for (i = 0; i < maxL; i++) {
 		for (j = 0; j < maxC; j++) {
