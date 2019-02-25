@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/types.h>
+#include <sys/time.h>	/* gettimeofday */
 #include "prodmat.h"
 #include "product.h"
 
@@ -10,11 +10,11 @@
 void initPendingMult(Product * prod) {
 	size_t i;
 	
-	for(i = 0; i < prod->maxThreads; i++){
+	for(i = 0; i < prod->maxThreads; i++) {
 		prod->pendingMult[i] = 0;
 	}
 
-	for (i=0;i < prod->nbThreads; i++){
+	for (i = 0; i < prod->nbThreads; i++) {
 		prod->pendingMult[i] = 1;
 	}
 }

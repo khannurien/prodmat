@@ -24,7 +24,7 @@ typedef struct {
 	size_t maxThreads; // le nombre maximum de threads requis pour un produit matriciel
 	size_t nbThreads; // le nombre de threads effectivement engagés dans un produit matriciel
 	s_mat * matrix; // un pointeur vers la structure contenant les matrices (tailles et valeurs)
-	int ** res; // matrice de résultat
+	int ** res; // matrice de résultat, pour une itération
 } Product;
 
 /**

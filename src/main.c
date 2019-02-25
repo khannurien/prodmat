@@ -9,7 +9,6 @@
 #include <sys/mman.h> 	/* mmap, mprotect */
 #include <sys/stat.h> 	/* stat */
 #include <sys/types.h> 	/* mprotect */
-#include <sys/time.h>	/* gettimeofday */
 #include "writer.h"
 #include "reader.h"
 #include "prodmat.h"
@@ -29,7 +28,7 @@ void * calc(void * data) {
 
 	// récupération de l'index
 	index = * ((size_t *) data);
-	fprintf(stderr,"Begin mult(%d)\n", (int) index);
+	fprintf(stderr,"Begin calc(%d)\n", (int) index);
 
 	// tant que toutes les itérations n'ont pas eu lieu...
 	for (iter = 0; iter < prod.matrix->nbMult; iter++) {
@@ -45,20 +44,20 @@ void * calc(void * data) {
 
 		// calcul des index dans les matrices en fonction de l'index du thread
 		int i, j;
-		i = (int) index / prod.matrix->matSize[(int) index + 1][1];
-		j = (int) index - i * prod.matrix->matSize[(int) index + 1][1];
+		int iMat = ((int) index) * 2 + 1;
+		i = ((int) index) / prod.matrix->matSize[iMat][1];
+		j = ((int) index) - i * prod.matrix->matSize[iMat][1];
 
 		// calcul du coefficient à placer dans la matrice résultat
 		int coeff = 0;
 
 		int k;
-		for (k = 0; k < prod.matrix->matSize[(int) index][0]; k++) {
-			coeff += prod.matrix->matTab[(int) index][i][k] * prod.matrix->matTab[(int) index + 1][k][j];
+		for (k = 0; k < prod.matrix->matSize[(int) index * 2][0]; k++) {
+			coeff += prod.matrix->matTab[(int) index * 2][i][k] * prod.matrix->matTab[((int) index) * 2 + 1][k][j];
 		}
 
 		// affectation à la matrice de résultat
 		prod.res[i][j] = coeff;
-		printf("%d\n", coeff);
 
 		// perte de temps
 		wasteTime(200+(rand()%200));
@@ -102,19 +101,14 @@ int main(int argc, char * argv[]) {
 
 	// récupération du chemin du fichier de données
 	char * fileName;
-	if ((argc <= 1) || (sscanf(argv[1], "%s", fileName) != 1)) {
-		fprintf(stderr, "Usage: %s fileName\n", argv[0]);
-		return EXIT_FAILURE;
-	}
+	fileName = argv[1];
 
 	// projection mémoire
 	char * memData;
 	memData = fileMap(fileName);
 
 	// lecture données
-	char * start;
-	s_mat * matData;
-	matData = dataRead(start);
+	prod.matrix = dataRead(memData);
 
 	// initialisation
 	prod.state = STATE_WAIT;
@@ -181,29 +175,25 @@ int main(int argc, char * argv[]) {
 		multData[i] = i;
 	}
 
-	/* Threads & CPUs */
+	// affinité des threads sur les CPUs
 	cpu_set_t threads_cpus[nbcpus];
 	pthread_attr_t threads_attr[nbcpus];
 
 	for (i = 0; i < prod.maxThreads; i++) {
+		int indexMod = i % nbcpus;
 		/* Initialisation des struct attr */
-		pthread_attr_init(&threads_attr[i]);
+		pthread_attr_init(&threads_attr[indexMod]);
 		/* RAZ */
-		CPU_ZERO(&threads_cpus[i]);
+		CPU_ZERO(&threads_cpus[indexMod]);
 		/* Attribution */
-			printf("i : %d\n", (int) i);
-			printf("nbcpus : %d\n", nbcpus);
-		CPU_SET(i % nbcpus, &threads_cpus[i]);
-		/*
-		*        int pthread_attr_setaffinity_np(pthread_attr_t *attr,
-		*                                  size_t cpusetsize, const cpu_set_t *cpuset);
-		*/
-		pthread_attr_setaffinity_np(&threads_attr[i], sizeof(threads_cpus[i]), &threads_cpus[i]);
+		CPU_SET(indexMod, &threads_cpus[indexMod]);
+		/*		*/
+		pthread_attr_setaffinity_np(&threads_attr[indexMod], sizeof(threads_cpus[indexMod]), &threads_cpus[indexMod]);
 	}
 
 	// création des threads de multiplication
 	for (i = 0; i < prod.maxThreads; i++) {
-		if (pthread_create(&multTh[i], &threads_attr[i], calc, &multData[i]) == -1) {
+		if (pthread_create(&multTh[i], &threads_attr[i % nbcpus], calc, &multData[i]) == -1) {
 			perror("pthread_create");
 		return EXIT_FAILURE;
 		}
@@ -214,7 +204,7 @@ int main(int argc, char * argv[]) {
 		size_t j;
 
 		// calcul du nombre de threads effectifs
-		prod.nbThreads = prod.matrix->matSize[n][0] * prod.matrix->matSize[n + 1][1];
+		prod.nbThreads = prod.matrix->matSize[(int) iter][0] * prod.matrix->matSize[(int) iter + 1][1];
 
 		pthread_mutex_lock(&prod.mutex);
 		// on remet les compteurs à 1 pour la prochaine itération
