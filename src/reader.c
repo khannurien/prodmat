@@ -101,7 +101,7 @@ struct s_mat * dataRead(char * start) {
 	}
 
 	// lecture des données des nbMult * 2 matrices
-	for (i = 0; i <= matStruct->nbMult; i += 2) {
+	for (i = 0; i < matStruct->nbMat; i += 2) {
 		int j;
 		// lecture des tailles
 		for (j = 0; j < 2; j++) {
@@ -127,17 +127,16 @@ struct s_mat * dataRead(char * start) {
 		}
 
 		// allocation des lignes de chaque matrice
-		int k;
-		for (k = 0; k < matStruct->nbMat; k++) {
-			if ((matStruct->matTab[k] = (int **) malloc(matStruct->matSize[k][0] * sizeof(int *))) == NULL) {
+		for (j = 0; j < 2; j++) {
+			if ((matStruct->matTab[i + j] = (int **) malloc(matStruct->matSize[i + j][0] * sizeof(int *))) == NULL) {
 				perror("malloc");
 				free(matStruct->matTab);
 				return NULL;
 			}
 			// allocation des colonnes de chaque ligne
-			int j;
-			for (j = 0; j < matStruct->matSize[k][0]; j++) {
-				if ((matStruct->matTab[k][j] = (int *) malloc(matStruct->matSize[k][1] * sizeof(int))) == NULL) {
+			int k;
+			for (k = 0; k < matStruct->matSize[i + j][0]; k++) {
+				if ((matStruct->matTab[i + j][k] = (int *) malloc(matStruct->matSize[i + j][1] * sizeof(int))) == NULL) {
 					perror("malloc");
 					free(matStruct->matTab);
 					return NULL;
@@ -157,6 +156,7 @@ struct s_mat * dataRead(char * start) {
 						end = buf;
 						for (colonne = 0; colonne < matStruct->matSize[i + j][1]; colonne++) {
 							matStruct->matTab[i + j][ligne][colonne] = strtol(end, &end, 10);
+							printf("%d\n", matStruct->matTab[i + j][ligne][colonne]);
 						}
 
 						if (end == buf || * end != '\n') {

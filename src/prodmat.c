@@ -94,15 +94,14 @@ int main(int argc, char * argv[]) {
 	pthread_t  addTh;
 	void      *threadReturnValue;
 
-	/************* CPUs **************/
-	int nbcpus = sysconf(_SC_NPROCESSORS_ONLN); /* utiliser nbcpus-1 pour le modulo */
-
-	/* A cause de warnings lorsque le code n'est pas encore la...*/
-	(void)addTh; (void)threadReturnValue;
-
 	// récupération du chemin du fichier de données
-	char * fileName;
-	fileName = argv[1];
+	char * fileName = NULL;
+	if (argc == 2) {
+		fileName = argv[1];
+	} else {
+		printf("Usage: %s <fileName>\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
 
 	// projection mémoire
 	char * memData;
@@ -177,6 +176,7 @@ int main(int argc, char * argv[]) {
 	}
 
 	// affinité des threads sur les CPUs
+	int nbcpus = sysconf(_SC_NPROCESSORS_ONLN);
 	cpu_set_t threads_cpus[nbcpus];
 	pthread_attr_t threads_attr[nbcpus];
 
@@ -199,6 +199,13 @@ int main(int argc, char * argv[]) {
 			return EXIT_FAILURE;
 		}
 	}
+
+	// création du fichier de résultat
+	int fdRes;
+	char resFile[256];
+	strcpy(resFile, fileName);
+	strcat(resFile, ".res");
+	fdRes = fileCreate(resFile);
 
 	// tant que toutes les itérations n'ont pas eu lieu...
 	for (iter = 0; iter < prod.matrix->nbMult; iter++) {
@@ -223,18 +230,16 @@ int main(int argc, char * argv[]) {
 		pthread_mutex_unlock(&prod.mutex);
 
 		// écriture de la matrice résultat dans le fichier
-		int fdRes;
-		char resFile[256];
-		strcpy(resFile, fileName);
-		strcat(resFile, ".res");
-		fdRes = fileCreate(resFile);
 		resWrite(fdRes, prod.res, prod.matrix->matSize[(int) iter][0], prod.matrix->matSize[(int) iter + 1][1]);
 	}
+
+	// fermeture du fichier de résultat
+	close(fdRes);
 
 	// attente de la fin des multiplications
 	int status;
 	for (i = 0; i < prod.maxThreads; i++) {
-		if (pthread_join(multTh[i], (void *) &status) != 0) {
+		if (pthread_join(multTh[i], threadReturnValue) != 0) {
 			perror("pthread_join");
 			return EXIT_FAILURE;
 		}
