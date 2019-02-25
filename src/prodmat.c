@@ -62,6 +62,7 @@ void * calc(void * data) {
 		prod.pendingMult[index] = 0;
 
 		// affectation à la matrice de résultat
+		printf("matrice[%d][%d][%d] = %d\n", iMat, i, j, coeff);
 		prod.res[i][j] = coeff;
 
 		// si c'est la dernière...
@@ -233,7 +234,7 @@ int main(int argc, char * argv[]) {
 		}
 
 		// écriture de la matrice résultat dans le fichier
-		resWrite(fdRes, prod.res, prod.matrix->matSize[iMat][0], prod.matrix->matSize[iMat][1]);
+		resWrite(fdRes, prod.res, prod.matrix->matSize[iMat][0], prod.matrix->matSize[iMat + 1][1]);
 
 		// libération du mutex
 		pthread_mutex_unlock(&prod.mutex);
