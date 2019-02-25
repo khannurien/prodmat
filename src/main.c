@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
 #include <sched.h>		/* cpu_set_t */
@@ -190,7 +191,7 @@ int main(int argc, char * argv[]) {
 		/* RAZ */
 		CPU_ZERO(&threads_cpus[i]);
 		/* Attribution */
-			printf("i : %d\n", i);
+			printf("i : %d\n", (int) i);
 			printf("nbcpus : %d\n", nbcpus);
 		CPU_SET(i % nbcpus, &threads_cpus[i]);
 		/*
