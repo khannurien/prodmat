@@ -234,8 +234,6 @@ int main(int argc, char * argv[]) {
 			pthread_cond_wait(&prod.cond, &prod.mutex);
 		}
 
-		printf("nbthreads %d\n", prod.nbThreads);
-
 		// écriture de la matrice résultat dans le fichier
 		resWrite(fdRes, prod.res, prod.matrix->matSize[iMat][0], prod.matrix->matSize[iMat + 1][1]);
 
