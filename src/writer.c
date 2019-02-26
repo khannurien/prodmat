@@ -92,8 +92,11 @@ void resWrite(int fd, int ** matrix, int maxL, int maxC) {
 	int i, j;
 	char buf[8];
 
+	printf("maxL : %d // maxC : %d\n", maxL, maxC);
+
 	for (i = 0; i < maxL; i++) {
 		for (j = 0; j < maxC; j++) {
+			printf("i : %d // j : %d\n", i, j);
 			sprintf(buf, "%d ", matrix[i][j]);
 			if ((write(fd, buf, strlen(buf))) == -1) {
 				perror("write");

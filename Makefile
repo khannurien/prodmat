@@ -25,6 +25,7 @@ obj/writemat.o: src/writemat.c src/writer.h src/reader.h src/prodmat.h
 
 clean:
 	rm bin/* obj/*.o; \
+	rm data/*.res \
 	rmdir $(DIRS)
 
 $(info $(shell mkdir -p $(DIRS)))

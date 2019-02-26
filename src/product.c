@@ -11,7 +11,7 @@ void initPendingMult(Product * prod) {
 	size_t i;
 	
 	for(i = 0; i < prod->maxThreads; i++) {
-		prod->pendingMult[i] = 0;
+		prod->pendingMult[i] = 2;
 	}
 
 	for (i = 0; i < prod->nbThreads; i++) {

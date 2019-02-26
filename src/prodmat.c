@@ -43,27 +43,32 @@ void * calc(void * data) {
 		// on débute la multiplication
 		fprintf(stderr, "--> calc(%d)\n", (int) index);
 
-		// calcul des index dans les matrices en fonction de l'index du thread
-		int iMat = (((int) iter) * 2);
-		int i, j;
-		i = index / prod.matrix->matSize[iMat + 1][1];
-		j = index - i * prod.matrix->matSize[iMat + 1][1];
+		// éviter les calculs inutiles -- et les segfault par la même occasion...
+		if (prod.pendingMult[index] != 2) {
+			// calcul des index dans les matrices en fonction du numéro d'itération
+			int iMat = (((int) iter) * 2);
+			int i, j;
+			i = index / prod.matrix->matSize[iMat + 1][1];
+			j = index - i * prod.matrix->matSize[iMat + 1][1];
 
-		// calcul du coefficient à placer dans la matrice résultat
-		int coeff = 0;
+			// calcul du coefficient à placer dans la matrice résultat
+			int coeff = 0;
 
-		int k;
-		for (k = 0; k < prod.matrix->matSize[iMat][0]; k++) {
-			coeff += prod.matrix->matTab[iMat][i][k] * prod.matrix->matTab[iMat + 1][k][j];
+			int k;
+			for (k = 0; k < prod.matrix->matSize[iMat][1]; k++) {
+				coeff += prod.matrix->matTab[iMat][i][k] * prod.matrix->matTab[iMat + 1][k][j];
+			}
+
+			// affectation à la matrice de résultat
+			pthread_mutex_lock(&prod.mutex);
+			prod.res[i][j] = coeff;
+			pthread_mutex_unlock(&prod.mutex);
+
 		}
 
 		// marquer la fin de la multiplication en cours
 		pthread_mutex_lock(&prod.mutex);
 		prod.pendingMult[index] = 0;
-
-		// affectation à la matrice de résultat
-		printf("matrice[%d][%d][%d] = %d\n", iMat, i, j, coeff);
-		prod.res[i][j] = coeff;
 
 		// si c'est la dernière...
 		if (nbPendingMult(&prod) == 0) {
@@ -116,20 +121,16 @@ int main(int argc, char * argv[]) {
 	int maxL = 0;
 	int maxC = 0;
 	int n;
-	for (n = 0; n < prod.matrix->nbMult; n += 2) {
-		// max threads
-		int tmpMax = prod.matrix->matSize[n][0] * prod.matrix->matSize[n + 1][1];
-		if (tmpMax > maxTh) maxTh = tmpMax;
-
+	for (n = 0; n < prod.matrix->nbMult; n++) {
 		// max lignes
-		if (prod.matrix->matSize[n][0] > maxL) maxL = prod.matrix->matSize[n][0];
+		if (prod.matrix->matSize[n * 2][0] > maxL) maxL = prod.matrix->matSize[n * 2][0];
 
 		// max colonnes
-		if (prod.matrix->matSize[n + 1][1] > maxC) maxC = prod.matrix->matSize[n + 1][1];
+		if (prod.matrix->matSize[n * 2 + 1][1] > maxC) maxC = prod.matrix->matSize[n * 2 + 1][1];
 	}
 
-	// affectation
-	prod.maxThreads = maxTh;
+	// calcul nb threads max
+	prod.maxThreads = maxL * maxC;
 
 	// allocation de la matrice de résultat
 	if ((prod.res = (int **) malloc(maxL * sizeof(int *))) == NULL) {
@@ -232,6 +233,8 @@ int main(int argc, char * argv[]) {
 		while(prod.state != STATE_WRITE) {
 			pthread_cond_wait(&prod.cond, &prod.mutex);
 		}
+
+		printf("nbthreads %d\n", prod.nbThreads);
 
 		// écriture de la matrice résultat dans le fichier
 		resWrite(fdRes, prod.res, prod.matrix->matSize[iMat][0], prod.matrix->matSize[iMat + 1][1]);
