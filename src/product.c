@@ -5,12 +5,16 @@
 #include "product.h"
 
 /**
+ * @brief Initialiser le tableau pendingMult. Les valeurs sont initialisées à 2
+ * pour tous les threads, et lors d'une itération, les valeurs dans le tableau
+ * pour les threads utiles sont passées à 1.
  * 
+ * @param prod La structure Product du programme de calcul.
  */
 void initPendingMult(Product * prod) {
 	size_t i;
 	
-	for(i = 0; i < prod->maxThreads; i++) {
+	for (i = 0; i < prod->maxThreads; i++) {
 		prod->pendingMult[i] = 2;
 	}
 
@@ -20,7 +24,10 @@ void initPendingMult(Product * prod) {
 }
 
 /**
+ * @brief Trouver le nombre de multiplications en attente.
  * 
+ * @param prod La structure Product du programme de calcul.
+ * @return int Le nombre de multiplications restantes.
  */
 int nbPendingMult(Product * prod) {
 	size_t i;
@@ -30,20 +37,4 @@ int nbPendingMult(Product * prod) {
 	}
 
 	return(nb);
-}
-
-/**
- *
- * Exemple : wasteTime(200+(rand()%200));
- */
-void wasteTime(unsigned long ms) {
-	unsigned long t, t0;
-	struct timeval tv;
-	gettimeofday(&tv, (struct timezone *) 0);
-	t0 = tv.tv_sec * 1000LU + tv.tv_usec / 1000LU;
-
-	do {
-		gettimeofday(&tv,(struct timezone *)0);
-		t = tv.tv_sec * 1000LU + tv.tv_usec / 1000LU;
-	} while (t - t0 < ms);
 }

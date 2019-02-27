@@ -16,12 +16,16 @@
 #include "product.h"
 
 /**
- * Structure de données pour la multiplication de matrices.
+ * @brief Structure de données pour la multiplication de matrices.
+ * 
  */
 Product prod;
 
 /**
- * Fonction de calcul passée aux threads de multiplication.
+ * @brief Fonction de calcul de produit matriciel passée aux threads.
+ * 
+ * @param data L'index du thread qui exécute la fonction dans le tableau multData.
+ * @return void* L'index du thread qui exécute la fonction dans le tableau multData (NULL en cas d'erreur).
  */
 void * calc(void * data) {
 	size_t index;
@@ -34,11 +38,11 @@ void * calc(void * data) {
 	// tant que toutes les itérations n'ont pas eu lieu...
 	for (iter = 0; iter < prod.matrix->nbMult; iter++) {
 		// attente de l'autorisation de multiplication pour une nouvelle itération
-		pthread_mutex_lock(&prod.mutex);
+		if (pthread_mutex_lock(&prod.mutex) == EINVAL) return NULL;
 		while((prod.state != STATE_CALC) || (prod.pendingMult[index] == 0)) {
 			pthread_cond_wait(&prod.cond, &prod.mutex);
 		}
- 		pthread_mutex_unlock(&prod.mutex);
+ 		if (pthread_mutex_unlock(&prod.mutex) == EINVAL) return NULL;
 
 		// on débute la multiplication
 		fprintf(stderr, "--> calc(%d)\n", (int) index);
@@ -60,14 +64,14 @@ void * calc(void * data) {
 			}
 
 			// affectation à la matrice de résultat
-			pthread_mutex_lock(&prod.mutex);
+			if (pthread_mutex_lock(&prod.mutex) == EINVAL) return NULL;
 			prod.res[i][j] = coeff;
-			pthread_mutex_unlock(&prod.mutex);
+ 			if (pthread_mutex_unlock(&prod.mutex) == EINVAL) return NULL;
 
 		}
 
 		// marquer la fin de la multiplication en cours
-		pthread_mutex_lock(&prod.mutex);
+		if (pthread_mutex_lock(&prod.mutex) == EINVAL) return NULL;
 		prod.pendingMult[index] = 0;
 
 		// si c'est la dernière...
@@ -78,7 +82,7 @@ void * calc(void * data) {
 
 		// libération du mutex
 		pthread_cond_broadcast(&prod.cond);
-		pthread_mutex_unlock(&prod.mutex);
+ 		if (pthread_mutex_unlock(&prod.mutex) == EINVAL) return NULL;
 	}
 
 	// fin du calcul
@@ -88,7 +92,7 @@ void * calc(void * data) {
 }
 
 /**
- *
+ * @brief Programme de calcul de produits matriciels.
  */
 int main(int argc, char * argv[]) {
 	size_t i, iter;
@@ -108,7 +112,10 @@ int main(int argc, char * argv[]) {
 
 	// projection mémoire
 	char * memData;
-	memData = fileMap(fileName);
+	if ((memData = fileMap(fileName)) == NULL) {
+		perror("fileMap");
+		exit(EXIT_FAILURE);
+	}
 
 	// lecture données
 	prod.matrix = dataRead(memData);
@@ -177,21 +184,33 @@ int main(int argc, char * argv[]) {
 		multData[i] = i;
 	}
 
+	// obtention du nombre de CPUs sur la machine
+	int nbcpus;
+	if ((nbcpus = sysconf(_SC_NPROCESSORS_ONLN)) == -1) {
+		perror("sysconf");
+		exit(EXIT_FAILURE);
+	}
+
 	// affinité des threads sur les CPUs
-	int nbcpus = sysconf(_SC_NPROCESSORS_ONLN);
 	cpu_set_t threads_cpus[nbcpus];
 	pthread_attr_t threads_attr[nbcpus];
 
 	for (i = 0; i < prod.maxThreads; i++) {
 		int indexMod = i % nbcpus;
 		// init des structures d'attributs
-		pthread_attr_init(&threads_attr[indexMod]);
+		if (pthread_attr_init(&threads_attr[indexMod]) != 0) {
+			perror("pthread_attr_init");
+			exit(EXIT_FAILURE);
+		}
 		// RAZ
 		CPU_ZERO(&threads_cpus[indexMod]);
 		// ajout d'un CPU à l'ensemble
 		CPU_SET(indexMod, &threads_cpus[indexMod]);
 		// mise en place de l'affinité du thread sur cet ensemble
-		pthread_attr_setaffinity_np(&threads_attr[indexMod], sizeof(threads_cpus[indexMod]), &threads_cpus[indexMod]);
+		if (pthread_attr_setaffinity_np(&threads_attr[indexMod], sizeof(threads_cpus[indexMod]), &threads_cpus[indexMod]) != 0) {
+			perror("pthread_att_setaffinity_np");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	// création des threads de multiplication
@@ -207,12 +226,15 @@ int main(int argc, char * argv[]) {
 	char resFile[256];
 	strcpy(resFile, fileName);
 	strcat(resFile, ".res");
-	fdRes = fileCreate(resFile);
+	if ((fdRes = fileCreate(resFile)) == -1) {
+		perror("fileCreate");
+		exit(EXIT_FAILURE);
+	}
 
 	// tant que toutes les itérations n'ont pas eu lieu...
 	for (iter = 0; iter < prod.matrix->nbMult; iter++) {
 		// prise du mutex
-		pthread_mutex_lock(&prod.mutex);
+		if (pthread_mutex_lock(&prod.mutex) == EINVAL) return NULL;
 
 		// index des matrices à partir du numéro d'itération
 		int iMat = (((int) iter) * 2);
@@ -226,11 +248,11 @@ int main(int argc, char * argv[]) {
 		// autorisation de démarrage des multiplications pour une nouvelle itération
 		prod.state = STATE_CALC;
 		pthread_cond_broadcast(&prod.cond);
-		pthread_mutex_unlock(&prod.mutex);
+ 		if (pthread_mutex_unlock(&prod.mutex) == EINVAL) return NULL;
 
 		// attente de l'autorisation d'écriture
-		pthread_mutex_lock(&prod.mutex);
-		while(prod.state != STATE_WRITE) {
+		if (pthread_mutex_lock(&prod.mutex) == EINVAL) return NULL;
+		while (prod.state != STATE_WRITE) {
 			pthread_cond_wait(&prod.cond, &prod.mutex);
 		}
 
@@ -238,7 +260,7 @@ int main(int argc, char * argv[]) {
 		resWrite(fdRes, prod.res, prod.matrix->matSize[iMat][0], prod.matrix->matSize[iMat + 1][1]);
 
 		// libération du mutex
-		pthread_mutex_unlock(&prod.mutex);
+ 		if (pthread_mutex_unlock(&prod.mutex) == EINVAL) return NULL;
 	}
 
 	// fermeture du fichier de résultat
@@ -246,17 +268,17 @@ int main(int argc, char * argv[]) {
 
 	// attente de la fin des multiplications
 	for (i = 0; i < prod.maxThreads; i++) {
-		if (pthread_join(multTh[i], threadReturnValue) != 0) {
+		if (pthread_join(multTh[i], &threadReturnValue) != 0) {
 			perror("pthread_join");
 			return EXIT_FAILURE;
 		}
 	}
 
 	// destruction de cond
-	pthread_cond_destroy(&prod.cond);
+	if (pthread_cond_destroy(&prod.cond) == EBUSY) exit(EXIT_FAILURE);
 
 	// destruction du mutex
-	pthread_mutex_destroy(&prod.mutex);
+	if (pthread_mutex_destroy(&prod.mutex) == EBUSY) exit(EXIT_FAILURE);
 
 	// libérations
 	free(prod.pendingMult);

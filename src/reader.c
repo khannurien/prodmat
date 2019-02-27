@@ -6,12 +6,16 @@
 #include <sys/stat.h>	/* stat */
 #include <sys/types.h>	/* stat */	
 #include <sys/mman.h>	/* mmap */
+#include <errno.h>		/* errno */
+#include <limits.h>		/* LONG_MAX, LONG_MIN, ERANGE */
 #include "reader.h"
 #include "prodmat.h"
 
 /**
- * Projection mémoire pour un fichier désigné par son chemin.
- * Retourne un pointeur vers la zone de projection, ou NULL en cas d'échec.
+ * @brief Projection mémoire pour un fichier désigné par son chemin.
+ * 
+ * @param fileName Le fichier depuis lequel effectuer la projection.
+ * @return char* Un pointeur vers le début de la zone mémoire de projection (NULL en cas d'échec).
  */
 char * fileMap(char * fileName) {
 	char * memPtr;
@@ -43,6 +47,12 @@ char * fileMap(char * fileName) {
 	return memPtr;
 }
 
+/**
+ * @brief Lecture des données des matrices depuis l'entrée standard ou depuis un pointeur vers le début d'une zone de projection mémoire.
+ * 
+ * @param start Le pointeur vers la zone de projection, ou NULL si l'on veut lire depuis l'entrée standard.
+ * @return struct s_mat* Un pointeur vers la structure résultante (NULL en cas d'échec).
+ */
 struct s_mat * dataRead(char * start) {
 	struct s_mat * matStruct;
 
@@ -61,8 +71,15 @@ struct s_mat * dataRead(char * start) {
 		// stdin
 		printf("Nombre de multiplications de matrices :\n");
 		while (fgets(buf, sizeof(buf), stdin)) {
+			// test strtol
+			errno = 0;
 			nbMult = strtol(buf, &end, 10);
+			if ((nbMult == LONG_MAX || nbMult == LONG_MIN) && errno == ERANGE) {
+				perror("strtol");
+				return NULL;
+			}
 
+			// test format
 			if (end == buf || * end != '\n') {
 				printf("Rentrez un entier valide :\n");
 			} else {
@@ -71,7 +88,12 @@ struct s_mat * dataRead(char * start) {
 		}
 	} else {
 		// mmap
+		errno = 0;
 		nbMult = strtol(start, &end, 10);
+		if ((nbMult == LONG_MAX || nbMult == LONG_MIN) && errno == ERANGE) {
+			perror("strtol");
+			return NULL;
+		}
 	}
 	
 	// inscription dans la structure
@@ -97,6 +119,11 @@ struct s_mat * dataRead(char * start) {
 	// init du tableau de matrices
 	if ((matStruct->matTab = (int ***) malloc(matStruct->nbMat * sizeof(int **))) == NULL) {
 		perror("malloc");
+		for (i = 0; i < matStruct->nbMat; i++) {
+			free(matStruct->matSize[i]);
+		}
+		free(matStruct->matSize);
+		free(matStruct);
 		return NULL;
 	}
 
@@ -109,8 +136,21 @@ struct s_mat * dataRead(char * start) {
 				// stdin
 				printf("Taille de la matrice %d (<nbLignes> <nbColonnes>) :\n", i + j);
 				while (fgets(buf, sizeof(buf), stdin)) {
+					// test strtol
+					errno = 0;
 					matStruct->matSize[i + j][0] = strtol(buf, &end, 10);
+					if ((matStruct->matSize[i + j][0] == LONG_MAX || matStruct->matSize[i + j][0] == LONG_MIN) && errno == ERANGE) {
+						perror("strtol");
+						return NULL;
+					}
+
+					// test strtol
+					errno = 0;
 					matStruct->matSize[i + j][1] = strtol(end, &end, 10);
+					if ((matStruct->matSize[i + j][0] == LONG_MAX || matStruct->matSize[i + j][0] == LONG_MIN) && errno == ERANGE) {
+						perror("strtol");
+						return NULL;
+					}
 
 					if (end == buf || * end != '\n' || matStruct->matSize[i + j][0] == 0
 													|| matStruct->matSize[i + j][1] == 0) {
@@ -121,8 +161,21 @@ struct s_mat * dataRead(char * start) {
 				}
 			} else {
 				// mmap
+				// test strtol
+				errno = 0;
 				matStruct->matSize[i + j][0] = strtol(end, &end, 10);
+				if ((matStruct->matSize[i + j][0] == LONG_MAX || matStruct->matSize[i + j][0] == LONG_MIN) && errno == ERANGE) {
+					perror("strtol");
+					return NULL;
+				}
+
+				// test strtol
+				errno = 0;
 				matStruct->matSize[i + j][1] = strtol(end, &end, 10);	
+				if ((matStruct->matSize[i + j][0] == LONG_MAX || matStruct->matSize[i + j][0] == LONG_MIN) && errno == ERANGE) {
+					perror("strtol");
+					return NULL;
+				}
 			}
 		}
 
@@ -130,7 +183,12 @@ struct s_mat * dataRead(char * start) {
 		for (j = 0; j < 2; j++) {
 			if ((matStruct->matTab[i + j] = (int **) malloc(matStruct->matSize[i + j][0] * sizeof(int *))) == NULL) {
 				perror("malloc");
+				for (i = 0; i < matStruct->nbMat; i++) {
+					free(matStruct->matSize[i]);
+				}
+				free(matStruct->matSize);
 				free(matStruct->matTab);
+				free(matStruct);
 				return NULL;
 			}
 			// allocation des colonnes de chaque ligne
@@ -138,7 +196,13 @@ struct s_mat * dataRead(char * start) {
 			for (k = 0; k < matStruct->matSize[i + j][0]; k++) {
 				if ((matStruct->matTab[i + j][k] = (int *) malloc(matStruct->matSize[i + j][1] * sizeof(int))) == NULL) {
 					perror("malloc");
+					for (i = 0; i < matStruct->nbMat; i++) {
+						free(matStruct->matSize[i]);
+						free(matStruct->matTab[i]);
+					}
+					free(matStruct->matSize);
 					free(matStruct->matTab);
+					free(matStruct);
 					return NULL;
 				}
 			}
@@ -151,11 +215,17 @@ struct s_mat * dataRead(char * start) {
 			for (ligne = 0; ligne < matStruct->matSize[i + j][0]; ligne++) {
 				if (start == NULL) {
 					// stdin
-					printf("Ligne %d de la matrice %d (<val1,1 val1,2 val1,3 ...) :\n", ligne, i + j);
+					printf("Ligne %d de la matrice %d (<val1,1> <val1,2> <val1,3> ...) :\n", ligne, i + j);
 					while (fgets(buf, sizeof(buf), stdin)) {
 						end = buf;
 						for (colonne = 0; colonne < matStruct->matSize[i + j][1]; colonne++) {
+							// test strtol
+							errno = 0;
 							matStruct->matTab[i + j][ligne][colonne] = strtol(end, &end, 10);
+							if ((matStruct->matTab[i + j][ligne][colonne] == LONG_MAX || matStruct->matTab[ligne][colonne] == LONG_MIN) && errno == ERANGE) {
+								perror("strtol");
+								return NULL;
+							}
 						}
 
 						if (end == buf || * end != '\n') {
@@ -167,7 +237,13 @@ struct s_mat * dataRead(char * start) {
 				} else {
 					// mmap
 					for (colonne = 0; colonne < matStruct->matSize[i + j][1]; colonne++) {
+						// test strtol
+						errno = 0;
 						matStruct->matTab[i + j][ligne][colonne] = strtol(end, &end, 10);
+						if ((matStruct->matTab[i + j][ligne][colonne] == LONG_MAX || matStruct->matTab[ligne][colonne] == LONG_MIN) && errno == ERANGE) {
+							perror("strtol");
+							return NULL;
+						}
 					}					
 				}
 			}
