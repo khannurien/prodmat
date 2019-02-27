@@ -235,7 +235,7 @@ int main(int argc, char * argv[]) {
 	// tant que toutes les itérations n'ont pas eu lieu...
 	for (iter = 0; iter < prod.matrix->nbMult; iter++) {
 		// prise du mutex
-		if (pthread_mutex_lock(&prod.mutex) == EINVAL) return NULL;
+		if (pthread_mutex_lock(&prod.mutex) == EINVAL) exit(EXIT_FAILURE);
 
 		// index des matrices à partir du numéro d'itération
 		int iMat = (((int) iter) * 2);
@@ -249,10 +249,10 @@ int main(int argc, char * argv[]) {
 		// autorisation de démarrage des multiplications pour une nouvelle itération
 		prod.state = STATE_CALC;
 		pthread_cond_broadcast(&prod.cond);
- 		if (pthread_mutex_unlock(&prod.mutex) == EINVAL) return NULL;
+ 		if (pthread_mutex_unlock(&prod.mutex) == EINVAL) exit(EXIT_FAILURE);
 
 		// attente de l'autorisation d'écriture
-		if (pthread_mutex_lock(&prod.mutex) == EINVAL) return NULL;
+		if (pthread_mutex_lock(&prod.mutex) == EINVAL) exit(EXIT_FAILURE);
 		while (prod.state != STATE_WRITE) {
 			pthread_cond_wait(&prod.cond, &prod.mutex);
 		}
@@ -261,7 +261,7 @@ int main(int argc, char * argv[]) {
 		resWrite(fdRes, prod.res, prod.matrix->matSize[iMat][0], prod.matrix->matSize[iMat + 1][1]);
 
 		// libération du mutex
- 		if (pthread_mutex_unlock(&prod.mutex) == EINVAL) return NULL;
+ 		if (pthread_mutex_unlock(&prod.mutex) == EINVAL) exit(EXIT_FAILURE);
 	}
 
 	// fermeture du fichier de résultat
