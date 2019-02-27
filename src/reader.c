@@ -147,7 +147,7 @@ struct s_mat * dataRead(char * start) {
 					// test strtol
 					errno = 0;
 					matStruct->matSize[i + j][1] = strtol(end, &end, 10);
-					if ((matStruct->matSize[i + j][0] == LONG_MAX || matStruct->matSize[i + j][0] == LONG_MIN) && errno == ERANGE) {
+					if ((matStruct->matSize[i + j][1] == LONG_MAX || matStruct->matSize[i + j][1] == LONG_MIN) && errno == ERANGE) {
 						perror("strtol");
 						return NULL;
 					}
@@ -172,7 +172,7 @@ struct s_mat * dataRead(char * start) {
 				// test strtol
 				errno = 0;
 				matStruct->matSize[i + j][1] = strtol(end, &end, 10);	
-				if ((matStruct->matSize[i + j][0] == LONG_MAX || matStruct->matSize[i + j][0] == LONG_MIN) && errno == ERANGE) {
+				if ((matStruct->matSize[i + j][1] == LONG_MAX || matStruct->matSize[i + j][1] == LONG_MIN) && errno == ERANGE) {
 					perror("strtol");
 					return NULL;
 				}
@@ -222,7 +222,7 @@ struct s_mat * dataRead(char * start) {
 							// test strtol
 							errno = 0;
 							matStruct->matTab[i + j][ligne][colonne] = strtol(end, &end, 10);
-							if ((matStruct->matTab[i + j][ligne][colonne] == LONG_MAX || matStruct->matTab[ligne][colonne] == (int) LONG_MIN) && errno == ERANGE) {
+							if ((matStruct->matTab[i + j][ligne][colonne] == LONG_MAX || matStruct->matTab[i + j][ligne][colonne] == (int) LONG_MIN) && errno == ERANGE) {
 								perror("strtol");
 								return NULL;
 							}
@@ -240,7 +240,7 @@ struct s_mat * dataRead(char * start) {
 						// test strtol
 						errno = 0;
 						matStruct->matTab[i + j][ligne][colonne] = strtol(end, &end, 10);
-						if ((matStruct->matTab[i + j][ligne][colonne] == LONG_MAX || matStruct->matTab[ligne][colonne] == (int) LONG_MIN) && errno == ERANGE) {
+						if ((matStruct->matTab[i + j][ligne][colonne] == LONG_MAX || matStruct->matTab[i + j][ligne][colonne] == (int) LONG_MIN) && errno == ERANGE) {
 							perror("strtol");
 							return NULL;
 						}
