@@ -10,6 +10,7 @@
 #include <sys/mman.h> 	/* mmap, mprotect */
 #include <sys/stat.h> 	/* stat */
 #include <sys/types.h> 	/* mprotect */
+#include <errno.h>		/* errno, EINVAL, EBUSY */
 #include "writer.h"
 #include "reader.h"
 #include "prodmat.h"
