@@ -11,6 +11,7 @@
 #include <sys/stat.h> 	/* stat */
 #include <sys/types.h> 	/* mprotect */
 #include <errno.h>		/* errno, EINVAL, EBUSY */
+#include <time.h>		/* clock */
 #include "writer.h"
 #include "reader.h"
 #include "prodmat.h"
@@ -96,6 +97,10 @@ void * calc(void * data) {
  * @brief Programme de calcul de produits matriciels.
  */
 int main(int argc, char * argv[]) {
+	// temps d'exécution
+	double tpsExec = 0.0;
+	clock_t depart = clock();
+	
 	size_t i, iter;
 	pthread_t *multTh;
 	size_t    *multData;
@@ -285,5 +290,12 @@ int main(int argc, char * argv[]) {
 	free(prod.pendingMult);
 	free(multTh);
 	free(multData);
+
+	// temps d'exécution
+	clock_t arrivee = clock();
+	tpsExec += (double) (arrivee - depart) / CLOCKS_PER_SEC;
+
+	printf("Temps d'exécution : %f secondes.\n", tpsExec);
+
 	return(EXIT_SUCCESS);
 }

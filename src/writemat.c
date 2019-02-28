@@ -19,6 +19,7 @@ int main(int argc, char * argv[]) {
 		fileName = argv[1];
 	} else {
 		printf("Usage: %s <fileName>\n", argv[0]);
+		exit(EXIT_FAILURE);
 	}
 
 	// lecture des données de la matrice dans la structure matStruct
